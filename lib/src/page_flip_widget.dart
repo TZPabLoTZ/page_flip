@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../page_flip.dart';
 
 class PageFlipWidget extends StatefulWidget {
@@ -17,9 +19,11 @@ class PageFlipWidget extends StatefulWidget {
     this.onPageFlipped,
     this.onFlipStart,
     this.controller,
-  })  : assert(initialIndex < children.length,
-            'initialIndex cannot be greater than children length'),
-        super(key: key);
+  }) : assert(
+         initialIndex < children.length,
+         'initialIndex cannot be greater than children length',
+       ),
+       super(key: key);
 
   final Color backgroundColor;
   final List<Widget> children;
@@ -72,33 +76,47 @@ class PageFlipWidgetState extends State<PageFlipWidget>
   void _setUp({bool isRefresh = false}) {
     _controllers.clear();
     pages.clear();
+
+    // Cria uma cópia segura dos children para evitar mutação direta
+    final childrenCopy = List<Widget>.from(widget.children);
     if (widget.lastPage != null) {
-      widget.children.add(widget.lastPage!);
+      childrenCopy.add(widget.lastPage!);
     }
-    for (var i = 0; i < widget.children.length; i++) {
+
+    // Garante que o initialIndex não está fora do range da nova lista
+    assert(
+      widget.initialIndex < childrenCopy.length,
+      'initialIndex cannot be greater than children length',
+    );
+
+    for (var i = 0; i < childrenCopy.length; i++) {
       final controller = AnimationController(
         value: 1,
         duration: widget.duration,
         vsync: this,
       );
       _controllers.add(controller);
+
       final child = PageFlipBuilder(
         amount: controller,
         backgroundColor: widget.backgroundColor,
         isRightSwipe: widget.isRightSwipe,
         pageIndex: i,
         key: Key('item$i'),
-        child: widget.children[i],
+        child: childrenCopy[i],
       );
       pages.add(child);
     }
+
     pages = pages.reversed.toList();
+
     if (isRefresh) {
       goToPage(pageNumber);
     } else {
       pageNumber = widget.initialIndex;
       lastPageLoad = pages.length < 3 ? 0 : 3;
     }
+
     if (widget.initialIndex != 0) {
       currentPage = ValueNotifier(widget.initialIndex);
       currentWidget = ValueNotifier(pages[pageNumber]);
@@ -242,26 +260,25 @@ class PageFlipWidgetState extends State<PageFlipWidget>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, dimens) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (details) {},
-        onTapUp: (details) {},
-        onPanDown: (details) {},
-        onPanEnd: (details) {},
-        onTapCancel: () {},
-        onHorizontalDragCancel: () => _isForward = null,
-        onHorizontalDragUpdate: (details) => _turnPage(details, dimens),
-        onHorizontalDragEnd: (details) => _onDragFinish(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            if (widget.lastPage != null) ...[
-              widget.lastPage!,
-            ],
-            if (pages.isNotEmpty) ...pages else const SizedBox.shrink(),
-          ],
-        ),
-      ),
+      builder:
+          (context, dimens) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {},
+            onTapUp: (details) {},
+            onPanDown: (details) {},
+            onPanEnd: (details) {},
+            onTapCancel: () {},
+            onHorizontalDragCancel: () => _isForward = null,
+            onHorizontalDragUpdate: (details) => _turnPage(details, dimens),
+            onHorizontalDragEnd: (details) => _onDragFinish(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                if (widget.lastPage != null) ...[widget.lastPage!],
+                if (pages.isNotEmpty) ...pages else const SizedBox.shrink(),
+              ],
+            ),
+          ),
     );
   }
 }
