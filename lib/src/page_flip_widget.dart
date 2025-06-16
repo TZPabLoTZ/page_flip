@@ -63,12 +63,12 @@ class PageFlipWidgetState extends State<PageFlipWidget>
   @override
   void initState() {
     super.initState();
-    // Initialize global variables (defined in page_flip.dart)
+
     imageData = {};
     currentPage = ValueNotifier(-1);
     currentWidget = ValueNotifier(Container());
     currentPageIndex = ValueNotifier(0);
-    // Associate the controller, if provided, with this state
+
     widget.controller?._state = this;
     _setUp();
   }
@@ -77,16 +77,17 @@ class PageFlipWidgetState extends State<PageFlipWidget>
     _controllers.clear();
     pages.clear();
 
-    // Cria uma cópia segura dos children para evitar mutação direta
     final childrenCopy = List<Widget>.from(widget.children);
     if (widget.lastPage != null) {
       childrenCopy.add(widget.lastPage!);
     }
 
-    // Garante que o initialIndex não está fora do range da nova lista
     assert(
-      widget.initialIndex < childrenCopy.length,
-      'initialIndex cannot be greater than children length',
+      widget.initialIndex <
+          (widget.lastPage != null
+              ? widget.children.length + 1
+              : widget.children.length),
+      'initialIndex cannot be greater than total pages (children + lastPage)',
     );
 
     for (var i = 0; i < childrenCopy.length; i++) {
@@ -129,7 +130,6 @@ class PageFlipWidgetState extends State<PageFlipWidget>
   bool get _isFirstPage => pageNumber == 0;
 
   void _turnPage(DragUpdateDetails details, BoxConstraints dimens) {
-    // During dragging, update currentPage to trigger the builder's animation effect
     currentPage.value = pageNumber;
     currentWidget.value = Container();
     final ratio = details.delta.dx / dimens.maxWidth;
@@ -188,12 +188,10 @@ class PageFlipWidgetState extends State<PageFlipWidget>
     currentPage.value = -1;
   }
 
-  /// Triggers the animation to advance to the next page – via gesture or button.
   Future nextPage() async {
-    // Prevent going beyond the last page
     if (_isLastPage) return;
     widget.onFlipStart?.call();
-    // Update currentPage to trigger the builder effect
+
     currentPage.value = pageNumber;
     await _controllers[pageNumber].reverse();
     if (mounted) {
@@ -204,23 +202,21 @@ class PageFlipWidgetState extends State<PageFlipWidget>
         currentPageIndex.value = pageNumber;
         currentWidget.value = pages[pageNumber];
       }
-      // In case it is the last page, ensure the notifiers are updated
+
       if (_isLastPage) {
         currentPageIndex.value = pageNumber;
         currentWidget.value = pages[pageNumber];
       }
       widget.onPageFlipped?.call(pageNumber);
     }
-    // Reset currentPage after the animation
+
     currentPage.value = -1;
   }
 
-  /// Triggers the animation to go back to the previous page – via gesture or button.
   Future previousPage() async {
-    // Prevent going before the first page
     if (_isFirstPage) return;
     widget.onFlipStart?.call();
-    // Update currentPage to trigger the reverse animation effect
+
     currentPage.value = pageNumber - 1;
     await _controllers[pageNumber - 1].forward();
     if (mounted) {
